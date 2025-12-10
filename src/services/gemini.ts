@@ -83,7 +83,7 @@ export async function extractVocabFromImage(
           ],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 8192,
+            maxOutputTokens: 65536,
           },
         }),
       }
@@ -96,6 +96,16 @@ export async function extractVocabFromImage(
     }
 
     const data = await response.json()
+
+    // Check if response was truncated
+    const finishReason = data.candidates?.[0]?.finishReason
+    if (finishReason === 'MAX_TOKENS') {
+      return {
+        success: false,
+        error: 'Response was truncated. Try with a smaller image or fewer vocabulary items.',
+        rawOutput: JSON.stringify(data, null, 2),
+      }
+    }
 
     // Extract text from response
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text
