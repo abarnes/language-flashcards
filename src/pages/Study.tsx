@@ -68,9 +68,10 @@ export function Study() {
   // Session in progress
   if (session && !session.isComplete) {
     const currentCard = session.cards[session.currentIndex]
-    const showSource = session.mode === 'normal' ? !session.isFlipped : session.isFlipped
-    const frontText = showSource ? currentCard.source : currentCard.target
-    const backText = showSource ? currentCard.target : currentCard.source
+    // In normal mode: show source first, then target
+    // In reverse mode: show target first, then source
+    const frontText = session.mode === 'normal' ? currentCard.source : currentCard.target
+    const backText = session.mode === 'normal' ? currentCard.target : currentCard.source
 
     return (
       <div className="max-w-2xl mx-auto space-y-6">
@@ -101,17 +102,18 @@ export function Study() {
 
         {/* Flashcard */}
         <div
-          className="perspective-1000 cursor-pointer"
+          className="cursor-pointer"
           onClick={flipCard}
         >
-          <Card
-            className={cn(
-              'min-h-[300px] transition-transform duration-500 transform-style-preserve-3d',
-              session.isFlipped && 'rotate-y-180'
-            )}
-          >
+          <Card className="min-h-[300px] transition-all duration-300">
             <CardContent className="flex items-center justify-center h-full min-h-[300px] p-8">
               <div className="text-center">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                  {session.isFlipped
+                    ? (session.mode === 'normal' ? 'Answer' : 'Question')
+                    : (session.mode === 'normal' ? 'Question' : 'Answer')
+                  }
+                </p>
                 <p className="text-3xl font-bold mb-4">
                   {session.isFlipped ? backText : frontText}
                 </p>
@@ -120,18 +122,24 @@ export function Study() {
                     Tap to reveal
                   </p>
                 )}
-                {session.isFlipped && currentCard.gender && (
-                  <Badge variant="outline" className="mr-2">
-                    {currentCard.gender}
-                  </Badge>
-                )}
-                {session.isFlipped && currentCard.partOfSpeech && (
-                  <Badge variant="secondary">{currentCard.partOfSpeech}</Badge>
-                )}
-                {session.isFlipped && currentCard.example && (
-                  <p className="text-sm text-muted-foreground mt-4 italic">
-                    {currentCard.example}
-                  </p>
+                {session.isFlipped && (
+                  <div className="space-y-2">
+                    <div className="flex justify-center gap-2">
+                      {currentCard.gender && (
+                        <Badge variant="outline">
+                          {currentCard.gender}
+                        </Badge>
+                      )}
+                      {currentCard.partOfSpeech && (
+                        <Badge variant="secondary">{currentCard.partOfSpeech}</Badge>
+                      )}
+                    </div>
+                    {currentCard.example && (
+                      <p className="text-sm text-muted-foreground italic">
+                        {currentCard.example}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </CardContent>
