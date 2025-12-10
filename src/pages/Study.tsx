@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -8,6 +8,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  BookOpen,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -18,9 +19,9 @@ import { cn } from '@/lib/utils'
 
 export function Study() {
   const [searchParams] = useSearchParams()
-  const listId = searchParams.get('listId')
+  const initialListId = searchParams.get('listId')
 
-  const { lists, getList } = useVocabStore()
+  const { lists } = useVocabStore()
   const {
     session,
     startSession,
@@ -34,35 +35,58 @@ export function Study() {
 
   const [mode, setMode] = useState<'normal' | 'reverse'>('normal')
   const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([])
+  const [selectedListIds, setSelectedListIds] = useState<string[]>(
+    initialListId ? [initialListId] : []
+  )
 
-  const list = listId ? getList(listId) : null
+  // Get cards from selected lists (or all if none selected)
+  const selectedCards = useMemo(() => {
+    if (selectedListIds.length === 0) {
+      return lists.flatMap((l) => l.flashcards)
+    }
+    return lists
+      .filter((l) => selectedListIds.includes(l.id))
+      .flatMap((l) => l.flashcards)
+  }, [lists, selectedListIds])
 
-  // Get all available cards
-  const allCards = listId
-    ? list?.flashcards || []
-    : lists.flatMap((l) => l.flashcards)
-
-  // Get all available tags from cards
-  const availableTags = Array.from(
-    new Set(allCards.flatMap((card) => card.tags))
-  ).sort()
+  // Get all available tags from selected cards
+  const availableTags = useMemo(() => {
+    return Array.from(
+      new Set(selectedCards.flatMap((card) => card.tags))
+    ).sort()
+  }, [selectedCards])
 
   // Filter cards by selected tags
-  const filteredCards =
-    selectedTagFilters.length > 0
-      ? allCards.filter((card) =>
-          selectedTagFilters.some((tag) => card.tags.includes(tag))
-        )
-      : allCards
+  const filteredCards = useMemo(() => {
+    if (selectedTagFilters.length === 0) return selectedCards
+    return selectedCards.filter((card) =>
+      selectedTagFilters.some((tag) => card.tags.includes(tag))
+    )
+  }, [selectedCards, selectedTagFilters])
 
   const handleStartStudy = () => {
-    startSession(filteredCards, mode, listId || undefined, selectedTagFilters)
+    startSession(filteredCards, mode, undefined, selectedTagFilters)
   }
 
   const toggleTagFilter = (tag: string) => {
     setSelectedTagFilters((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     )
+  }
+
+  const toggleListSelection = (listId: string) => {
+    setSelectedListIds((prev) =>
+      prev.includes(listId)
+        ? prev.filter((id) => id !== listId)
+        : [...prev, listId]
+    )
+    // Clear tag filters when list selection changes
+    setSelectedTagFilters([])
+  }
+
+  const selectAllLists = () => {
+    setSelectedListIds([])
+    setSelectedTagFilters([])
   }
 
   // Session in progress
@@ -253,33 +277,111 @@ export function Study() {
     )
   }
 
+  // Calculate total cards across all lists
+  const totalAllCards = lists.reduce((sum, l) => sum + l.flashcards.length, 0)
+
   // Setup screen
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link to={listId ? `/list/${listId}` : '/'}>
+          <Link to="/">
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">
-            Study {list ? list.name : 'All Cards'}
-          </h1>
+          <h1 className="text-2xl font-bold">Study</h1>
           <p className="text-muted-foreground">
-            {filteredCards.length} card{filteredCards.length !== 1 ? 's' : ''} available
+            {filteredCards.length} card{filteredCards.length !== 1 ? 's' : ''} selected
           </p>
         </div>
       </div>
 
-      {filteredCards.length === 0 ? (
+      {lists.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-12 text-center text-muted-foreground">
-            No flashcards to study. Add some cards first!
+            No vocabulary lists yet. Create a list and add some cards first!
           </CardContent>
         </Card>
       ) : (
         <>
+          {/* List Selection */}
+          <Card>
+            <CardContent className="py-4">
+              <h3 className="font-medium mb-3">Select Lists</h3>
+              <div className="space-y-2">
+                {/* All Cards option */}
+                <button
+                  onClick={selectAllLists}
+                  className={cn(
+                    'w-full flex items-center gap-3 p-3 rounded-lg border transition-colors text-left',
+                    selectedListIds.length === 0
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:bg-muted'
+                  )}
+                >
+                  <div className={cn(
+                    'w-5 h-5 rounded border-2 flex items-center justify-center',
+                    selectedListIds.length === 0
+                      ? 'border-primary bg-primary'
+                      : 'border-muted-foreground'
+                  )}>
+                    {selectedListIds.length === 0 && (
+                      <Check className="h-3 w-3 text-primary-foreground" />
+                    )}
+                  </div>
+                  <BookOpen className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1">
+                    <div className="font-medium">All Cards</div>
+                    <div className="text-sm text-muted-foreground">
+                      {totalAllCards} cards from {lists.length} list{lists.length !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                </button>
+
+                {/* Individual lists */}
+                <div className="border-t pt-2 mt-2">
+                  <p className="text-xs text-muted-foreground mb-2 px-1">Or select specific lists:</p>
+                  {lists.map((list) => (
+                    <button
+                      key={list.id}
+                      onClick={() => toggleListSelection(list.id)}
+                      className={cn(
+                        'w-full flex items-center gap-3 p-3 rounded-lg border transition-colors text-left mb-2',
+                        selectedListIds.includes(list.id)
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:bg-muted'
+                      )}
+                    >
+                      <div className={cn(
+                        'w-5 h-5 rounded border-2 flex items-center justify-center',
+                        selectedListIds.includes(list.id)
+                          ? 'border-primary bg-primary'
+                          : 'border-muted-foreground'
+                      )}>
+                        {selectedListIds.includes(list.id) && (
+                          <Check className="h-3 w-3 text-primary-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium">{list.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {list.flashcards.length} card{list.flashcards.length !== 1 ? 's' : ''}
+                          {list.tags.length > 0 && (
+                            <span className="ml-2">
+                              • {list.tags.slice(0, 2).join(', ')}
+                              {list.tags.length > 2 && ` +${list.tags.length - 2}`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Mode Selection */}
           <Card>
             <CardContent className="py-4">
@@ -344,8 +446,16 @@ export function Study() {
 
           {/* Start Button */}
           <div className="flex gap-2">
-            <Button size="lg" className="flex-1" onClick={handleStartStudy}>
+            <Button
+              size="lg"
+              className="flex-1"
+              onClick={handleStartStudy}
+              disabled={filteredCards.length === 0}
+            >
               Start Studying
+              {filteredCards.length > 0 && (
+                <span className="ml-2 opacity-70">({filteredCards.length} cards)</span>
+              )}
             </Button>
             <Button
               size="lg"
@@ -354,6 +464,7 @@ export function Study() {
                 handleStartStudy()
                 setTimeout(shuffleCards, 0)
               }}
+              disabled={filteredCards.length === 0}
             >
               <Shuffle className="mr-2 h-4 w-4" />
               Shuffle
