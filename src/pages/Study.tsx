@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -67,6 +67,48 @@ export function Study() {
   const handleStartStudy = () => {
     startSession(filteredCards, mode, undefined, selectedTagFilters)
   }
+
+  // Keyboard shortcuts for study session
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!session || session.isComplete) return
+
+      switch (e.key.toLowerCase()) {
+        case ' ':
+          e.preventDefault()
+          flipCard()
+          break
+        case 'k':
+          if (session.isFlipped) {
+            markKnown()
+          }
+          break
+        case 'u':
+          if (session.isFlipped) {
+            markUnknown()
+          }
+          break
+        case 'arrowleft':
+          if (session.currentIndex > 0) {
+            previousCard()
+          }
+          break
+        case 'arrowright':
+          if (!session.isFlipped) {
+            flipCard()
+          } else if (session.currentIndex < session.cards.length - 1) {
+            markUnknown()
+          }
+          break
+      }
+    },
+    [session, flipCard, markKnown, markUnknown, previousCard]
+  )
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleKeyDown])
 
   const toggleTagFilter = (tag: string) => {
     setSelectedTagFilters((prev) =>
