@@ -109,8 +109,15 @@ export async function extractVocabFromImage(
 
     // Parse JSON from response
     try {
+      // Strip markdown code fences if present
+      let cleanedText = text
+      const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+      if (codeBlockMatch) {
+        cleanedText = codeBlockMatch[1].trim()
+      }
+
       // Try to find JSON array in the response
-      const jsonMatch = text.match(/\[[\s\S]*\]/)
+      const jsonMatch = cleanedText.match(/\[[\s\S]*\]/)
       if (!jsonMatch) {
         return {
           success: false,
