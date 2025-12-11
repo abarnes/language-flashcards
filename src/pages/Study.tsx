@@ -39,14 +39,22 @@ export function Study() {
     initialListId ? [initialListId] : []
   )
 
-  // Get cards from selected lists (or all if none selected)
+  // Get cards from selected lists (or all if none selected), deduplicating by source+target
   const selectedCards = useMemo(() => {
-    if (selectedListIds.length === 0) {
-      return lists.flatMap((l) => l.flashcards)
-    }
-    return lists
-      .filter((l) => selectedListIds.includes(l.id))
-      .flatMap((l) => l.flashcards)
+    const allCards = selectedListIds.length === 0
+      ? lists.flatMap((l) => l.flashcards)
+      : lists
+          .filter((l) => selectedListIds.includes(l.id))
+          .flatMap((l) => l.flashcards)
+
+    // Deduplicate by source+target combination (case-insensitive)
+    const seen = new Set<string>()
+    return allCards.filter((card) => {
+      const key = `${card.source.toLowerCase()}|${card.target.toLowerCase()}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
   }, [lists, selectedListIds])
 
   // Get all available tags from selected cards
@@ -139,6 +147,19 @@ export function Study() {
     const frontText = session.mode === 'normal' ? currentCard.source : currentCard.target
     const backText = session.mode === 'normal' ? currentCard.target : currentCard.source
 
+    // Check if front text is ambiguous (same text maps to different answers)
+    const frontKey = session.mode === 'normal' ? 'source' : 'target'
+    const backKey = session.mode === 'normal' ? 'target' : 'source'
+    const cardsWithSameFront = session.cards.filter(
+      (c) => c[frontKey].toLowerCase() === currentCard[frontKey].toLowerCase()
+    )
+    const isAmbiguous = cardsWithSameFront.some(
+      (c) => c[backKey].toLowerCase() !== currentCard[backKey].toLowerCase()
+    )
+
+    // Show disambiguating hints on front when source is ambiguous
+    const showHintsOnFront = isAmbiguous && !session.isFlipped
+
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Progress Header */}
@@ -183,6 +204,16 @@ export function Study() {
                 <p className="text-3xl font-bold mb-4">
                   {session.isFlipped ? backText : frontText}
                 </p>
+                {showHintsOnFront && (currentCard.gender || currentCard.partOfSpeech) && (
+                  <div className="flex justify-center gap-2 mb-2">
+                    {currentCard.partOfSpeech && (
+                      <Badge variant="secondary">{currentCard.partOfSpeech}</Badge>
+                    )}
+                    {currentCard.gender && (
+                      <Badge variant="outline">{currentCard.gender}</Badge>
+                    )}
+                  </div>
+                )}
                 {!session.isFlipped && (
                   <p className="text-sm text-muted-foreground">
                     Tap to reveal
