@@ -210,13 +210,13 @@ export function Study() {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Progress Header */}
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={endSession}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            End Session
+        <div className="flex items-center justify-between gap-2">
+          <Button variant="ghost" size="sm" onClick={endSession} className="px-2 sm:px-4">
+            <ArrowLeft className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">End Session</span>
           </Button>
-          <div className="text-sm text-muted-foreground">
-            Card {session.currentIndex + 1} of {session.cards.length}
+          <div className="text-sm text-muted-foreground whitespace-nowrap">
+            {session.currentIndex + 1} / {session.cards.length}
           </div>
           <div className="flex gap-2 text-sm">
             <span className="text-green-600">✓ {session.knownCount}</span>
@@ -291,7 +291,7 @@ export function Study() {
         </div>
 
         {/* Controls */}
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex items-center justify-center gap-2 sm:gap-4">
           <Button
             variant="outline"
             size="icon"
@@ -305,24 +305,22 @@ export function Study() {
             <>
               <Button
                 variant="outline"
-                size="lg"
                 onClick={handleMarkUnknown}
-                className="text-red-600 border-red-200 hover:bg-red-50"
+                className="text-red-600 border-red-200 hover:bg-red-50 px-3 sm:px-4"
               >
-                <X className="mr-2 h-5 w-5" />
-                Unknown
+                <X className="h-5 w-5 sm:mr-2" />
+                <span className="hidden sm:inline">Unknown</span>
               </Button>
               <Button
-                size="lg"
                 onClick={handleMarkKnown}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 px-3 sm:px-4"
               >
-                <Check className="mr-2 h-5 w-5" />
-                Known
+                <Check className="h-5 w-5 sm:mr-2" />
+                <span className="hidden sm:inline">Known</span>
               </Button>
             </>
           ) : (
-            <Button size="lg" onClick={flipCard}>
+            <Button onClick={flipCard} className="px-6">
               Flip Card
             </Button>
           )}
@@ -340,8 +338,8 @@ export function Study() {
           </Button>
         </div>
 
-        {/* Keyboard Shortcuts Hint */}
-        <p className="text-center text-xs text-muted-foreground">
+        {/* Keyboard Shortcuts Hint - hidden on mobile */}
+        <p className="hidden sm:block text-center text-xs text-muted-foreground">
           Space to flip • ← → to navigate • K for known • U for unknown
         </p>
       </div>
@@ -506,24 +504,24 @@ export function Study() {
           <Card>
             <CardContent className="py-4">
               <h3 className="font-medium mb-3">Study Mode</h3>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   variant={mode === 'normal' ? 'default' : 'outline'}
                   onClick={() => setMode('normal')}
-                  className="flex-1"
+                  className="flex-1 flex-col h-auto py-3 sm:flex-row sm:py-2"
                 >
-                  Normal
-                  <span className="text-xs ml-2 opacity-70">
+                  <span>Normal</span>
+                  <span className="text-xs opacity-70 sm:ml-2">
                     {sourceLangName} → {targetLangName}
                   </span>
                 </Button>
                 <Button
                   variant={mode === 'reverse' ? 'default' : 'outline'}
                   onClick={() => setMode('reverse')}
-                  className="flex-1"
+                  className="flex-1 flex-col h-auto py-3 sm:flex-row sm:py-2"
                 >
-                  Reverse
-                  <span className="text-xs ml-2 opacity-70">
+                  <span>Reverse</span>
+                  <span className="text-xs opacity-70 sm:ml-2">
                     {targetLangName} → {sourceLangName}
                   </span>
                 </Button>
@@ -535,7 +533,7 @@ export function Study() {
           <Card>
             <CardContent className="py-4">
               <h3 className="font-medium mb-3">Which Cards?</h3>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   variant={cardFilter === 'all' ? 'default' : 'outline'}
                   onClick={() => setCardFilter('all')}
@@ -597,7 +595,7 @@ export function Study() {
           )}
 
           {/* Start Button */}
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               size="lg"
               className="flex-1"
@@ -606,7 +604,7 @@ export function Study() {
             >
               Start Studying
               {filteredCards.length > 0 && (
-                <span className="ml-2 opacity-70">({filteredCards.length} cards)</span>
+                <span className="ml-2 opacity-70">({filteredCards.length})</span>
               )}
             </Button>
             <Button
