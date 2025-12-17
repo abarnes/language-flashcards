@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { BookOpen, Home, Settings, GraduationCap } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { AuthButton } from './AuthButton'
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: Home },
@@ -42,6 +43,7 @@ export function Layout({ children }: LayoutProps) {
                 {label}
               </Link>
             ))}
+            <AuthButton />
           </nav>
         </div>
       </header>

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Layout } from '@/components/Layout'
+import { AuthProvider } from '@/components/AuthProvider'
 import { Dashboard } from '@/pages/Dashboard'
 import { ListDetail } from '@/pages/ListDetail'
 import { Study } from '@/pages/Study'
@@ -9,15 +10,17 @@ import { Upload } from '@/pages/Upload'
 function App() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/list/:id" element={<ListDetail />} />
-          <Route path="/study" element={<Study />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/upload" element={<Upload />} />
-        </Routes>
-      </Layout>
+      <AuthProvider>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/list/:id" element={<ListDetail />} />
+            <Route path="/study" element={<Study />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/upload" element={<Upload />} />
+          </Routes>
+        </Layout>
+      </AuthProvider>
     </BrowserRouter>
   )
 }

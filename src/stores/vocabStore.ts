@@ -26,6 +26,9 @@ interface VocabState {
   // Bulk operations
   importLists: (lists: VocabList[]) => void
   clearAll: () => void
+
+  // Internal (for auth provider)
+  _hydrate: (lists: VocabList[]) => void
 }
 
 export const useVocabStore = create<VocabState>()(
@@ -158,6 +161,10 @@ export const useVocabStore = create<VocabState>()(
 
       clearAll: () => {
         set({ lists: [] })
+      },
+
+      _hydrate: (lists) => {
+        set({ lists })
       },
     }),
     {

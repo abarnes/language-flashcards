@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, EyeOff, Download, Upload, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, Download, Upload, Trash2, User, Cloud, CloudOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -9,6 +9,8 @@ import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useVocabStore } from '@/stores/vocabStore'
+import { useAuthStore } from '@/stores/authStore'
+import { useAuthContext } from '@/hooks/useAuth'
 import { LANGUAGES } from '@/types'
 import type { ExportData } from '@/types'
 
@@ -17,6 +19,8 @@ const APP_VERSION = '0.1.0'
 export function Settings() {
   const { settings, updateSettings } = useSettingsStore()
   const { lists, importLists, clearAll } = useVocabStore()
+  const { user, signOut, isLoading: authLoading } = useAuthStore()
+  const { isFirebaseEnabled, showAuthModal } = useAuthContext()
 
   const [showApiKey, setShowApiKey] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
@@ -204,6 +208,47 @@ export function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Account - only show if Firebase is configured */}
+      {isFirebaseEnabled && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Account
+            </CardTitle>
+            <CardDescription>
+              Sign in to sync your vocabulary lists across devices
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {user ? (
+              <>
+                <div className="flex items-center gap-2 text-sm">
+                  <Cloud className="h-4 w-4 text-green-600" />
+                  <span>Syncing to cloud</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Signed in as {user.email}
+                </p>
+                <Button variant="outline" onClick={signOut} disabled={authLoading}>
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CloudOff className="h-4 w-4" />
+                  <span>Data stored locally only</span>
+                </div>
+                <Button onClick={showAuthModal}>
+                  Sign In / Create Account
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Data Management */}
       <Card>
