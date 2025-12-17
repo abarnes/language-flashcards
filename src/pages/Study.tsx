@@ -15,6 +15,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useVocabStore } from '@/stores/vocabStore'
 import { useStudyStore } from '@/stores/studyStore'
+import { useSettingsStore } from '@/stores/settingsStore'
+import { LANGUAGES } from '@/types'
 import { cn } from '@/lib/utils'
 
 type CardFilter = 'all' | 'unknown'
@@ -34,6 +36,11 @@ export function Study() {
     shuffleCards,
     previousCard,
   } = useStudyStore()
+  const { settings } = useSettingsStore()
+
+  // Get language names from codes
+  const sourceLangName = LANGUAGES.find(l => l.code === settings.sourceLang)?.name ?? settings.sourceLang
+  const targetLangName = LANGUAGES.find(l => l.code === settings.targetLang)?.name ?? settings.targetLang
 
   const [mode, setMode] = useState<'normal' | 'reverse'>('normal')
   const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([])
@@ -507,7 +514,7 @@ export function Study() {
                 >
                   Normal
                   <span className="text-xs ml-2 opacity-70">
-                    Source → Target
+                    {sourceLangName} → {targetLangName}
                   </span>
                 </Button>
                 <Button
@@ -517,7 +524,7 @@ export function Study() {
                 >
                   Reverse
                   <span className="text-xs ml-2 opacity-70">
-                    Target → Source
+                    {targetLangName} → {sourceLangName}
                   </span>
                 </Button>
               </div>
