@@ -291,14 +291,14 @@ export function Study() {
         </div>
 
         {/* Controls */}
-        <div className="flex items-center justify-center gap-2 sm:gap-4">
+        <div className="flex items-center justify-center gap-3 sm:gap-4">
           <Button
             variant="outline"
-            size="icon"
             onClick={previousCard}
             disabled={session.currentIndex === 0}
+            className="h-12 w-12 p-0 sm:h-10 sm:w-10"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-6 w-6 sm:h-5 sm:w-5" />
           </Button>
 
           {session.isFlipped ? (
@@ -306,35 +306,35 @@ export function Study() {
               <Button
                 variant="outline"
                 onClick={handleMarkUnknown}
-                className="text-red-600 border-red-200 hover:bg-red-50 px-3 sm:px-4"
+                className="text-red-600 border-red-200 hover:bg-red-50 h-14 px-5 sm:h-10 sm:px-4"
               >
-                <X className="h-5 w-5 sm:mr-2" />
+                <X className="h-6 w-6 sm:h-5 sm:w-5 sm:mr-2" />
                 <span className="hidden sm:inline">Unknown</span>
               </Button>
               <Button
                 onClick={handleMarkKnown}
-                className="bg-green-600 hover:bg-green-700 px-3 sm:px-4"
+                className="bg-green-600 hover:bg-green-700 h-14 px-5 sm:h-10 sm:px-4"
               >
-                <Check className="h-5 w-5 sm:mr-2" />
+                <Check className="h-6 w-6 sm:h-5 sm:w-5 sm:mr-2" />
                 <span className="hidden sm:inline">Known</span>
               </Button>
             </>
           ) : (
-            <Button onClick={flipCard} className="px-6">
+            <Button onClick={flipCard} className="h-14 px-8 text-base sm:h-10 sm:px-6 sm:text-sm">
               Flip Card
             </Button>
           )}
 
           <Button
             variant="outline"
-            size="icon"
             onClick={() => {
               if (!session.isFlipped) flipCard()
               else handleMarkUnknown()
             }}
             disabled={session.currentIndex === session.cards.length - 1 && session.isFlipped}
+            className="h-12 w-12 p-0 sm:h-10 sm:w-10"
           >
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className="h-6 w-6 sm:h-5 sm:w-5" />
           </Button>
         </div>
 
