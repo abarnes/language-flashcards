@@ -597,8 +597,7 @@ export function Study() {
           {/* Start Button */}
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
-              size="lg"
-              className="flex-1 h-12 sm:h-11"
+              className="flex-1 h-14 text-base px-8 sm:h-11 sm:text-sm"
               onClick={handleStartStudy}
               disabled={filteredCards.length === 0}
             >
@@ -608,9 +607,8 @@ export function Study() {
               )}
             </Button>
             <Button
-              size="lg"
               variant="outline"
-              className="h-12 sm:h-11"
+              className="h-14 text-base px-8 sm:h-11 sm:text-sm"
               onClick={() => {
                 handleStartStudy()
                 setTimeout(shuffleCards, 0)
