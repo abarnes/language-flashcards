@@ -9,6 +9,8 @@ export interface Flashcard {
   example?: string
   notes?: string
   tags: string[]
+  // Study tracking
+  known?: boolean
   // SRS fields (for future use)
   lastReviewed?: number
   interval?: number

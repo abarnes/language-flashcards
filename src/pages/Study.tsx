@@ -17,17 +17,19 @@ import { useVocabStore } from '@/stores/vocabStore'
 import { useStudyStore } from '@/stores/studyStore'
 import { cn } from '@/lib/utils'
 
+type CardFilter = 'all' | 'unknown'
+
 export function Study() {
   const [searchParams] = useSearchParams()
   const initialListId = searchParams.get('listId')
 
-  const { lists } = useVocabStore()
+  const { lists, setFlashcardKnown } = useVocabStore()
   const {
     session,
     startSession,
     flipCard,
-    markKnown,
-    markUnknown,
+    markKnown: storeMarkKnown,
+    markUnknown: storeMarkUnknown,
     endSession,
     shuffleCards,
     previousCard,
@@ -38,6 +40,7 @@ export function Study() {
   const [selectedListIds, setSelectedListIds] = useState<string[]>(
     initialListId ? [initialListId] : []
   )
+  const [cardFilter, setCardFilter] = useState<CardFilter>('all')
 
   // Get cards from selected lists (or all if none selected), deduplicating by source+target
   const selectedCards = useMemo(() => {
@@ -64,17 +67,54 @@ export function Study() {
     ).sort()
   }, [selectedCards])
 
-  // Filter cards by selected tags
+  // Filter cards by selected tags and known status
   const filteredCards = useMemo(() => {
-    if (selectedTagFilters.length === 0) return selectedCards
-    return selectedCards.filter((card) =>
-      selectedTagFilters.some((tag) => card.tags.includes(tag))
-    )
+    let cards = selectedCards
+
+    // Filter by tags
+    if (selectedTagFilters.length > 0) {
+      cards = cards.filter((card) =>
+        selectedTagFilters.some((tag) => card.tags.includes(tag))
+      )
+    }
+
+    // Filter by known status
+    if (cardFilter === 'unknown') {
+      cards = cards.filter((card) => !card.known)
+    }
+
+    return cards
+  }, [selectedCards, selectedTagFilters, cardFilter])
+
+  // Count unknown cards for UI
+  const unknownCardCount = useMemo(() => {
+    let cards = selectedCards
+    if (selectedTagFilters.length > 0) {
+      cards = cards.filter((card) =>
+        selectedTagFilters.some((tag) => card.tags.includes(tag))
+      )
+    }
+    return cards.filter((card) => !card.known).length
   }, [selectedCards, selectedTagFilters])
 
   const handleStartStudy = () => {
     startSession(filteredCards, mode, undefined, selectedTagFilters)
   }
+
+  // Wrapper functions that persist known status
+  const handleMarkKnown = useCallback(() => {
+    if (!session) return
+    const currentCard = session.cards[session.currentIndex]
+    setFlashcardKnown(currentCard.id, true)
+    storeMarkKnown()
+  }, [session, setFlashcardKnown, storeMarkKnown])
+
+  const handleMarkUnknown = useCallback(() => {
+    if (!session) return
+    const currentCard = session.cards[session.currentIndex]
+    setFlashcardKnown(currentCard.id, false)
+    storeMarkUnknown()
+  }, [session, setFlashcardKnown, storeMarkUnknown])
 
   // Keyboard shortcuts for study session
   const handleKeyDown = useCallback(
@@ -88,12 +128,12 @@ export function Study() {
           break
         case 'k':
           if (session.isFlipped) {
-            markKnown()
+            handleMarkKnown()
           }
           break
         case 'u':
           if (session.isFlipped) {
-            markUnknown()
+            handleMarkUnknown()
           }
           break
         case 'arrowleft':
@@ -105,12 +145,12 @@ export function Study() {
           if (!session.isFlipped) {
             flipCard()
           } else if (session.currentIndex < session.cards.length - 1) {
-            markUnknown()
+            handleMarkUnknown()
           }
           break
       }
     },
-    [session, flipCard, markKnown, markUnknown, previousCard]
+    [session, flipCard, handleMarkKnown, handleMarkUnknown, previousCard]
   )
 
   useEffect(() => {
@@ -259,7 +299,7 @@ export function Study() {
               <Button
                 variant="outline"
                 size="lg"
-                onClick={markUnknown}
+                onClick={handleMarkUnknown}
                 className="text-red-600 border-red-200 hover:bg-red-50"
               >
                 <X className="mr-2 h-5 w-5" />
@@ -267,7 +307,7 @@ export function Study() {
               </Button>
               <Button
                 size="lg"
-                onClick={markKnown}
+                onClick={handleMarkKnown}
                 className="bg-green-600 hover:bg-green-700"
               >
                 <Check className="mr-2 h-5 w-5" />
@@ -285,7 +325,7 @@ export function Study() {
             size="icon"
             onClick={() => {
               if (!session.isFlipped) flipCard()
-              else markUnknown()
+              else handleMarkUnknown()
             }}
             disabled={session.currentIndex === session.cards.length - 1 && session.isFlipped}
           >
@@ -481,6 +521,38 @@ export function Study() {
                   </span>
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Card Filter */}
+          <Card>
+            <CardContent className="py-4">
+              <h3 className="font-medium mb-3">Which Cards?</h3>
+              <div className="flex gap-2">
+                <Button
+                  variant={cardFilter === 'all' ? 'default' : 'outline'}
+                  onClick={() => setCardFilter('all')}
+                  className="flex-1"
+                >
+                  All Cards
+                </Button>
+                <Button
+                  variant={cardFilter === 'unknown' ? 'default' : 'outline'}
+                  onClick={() => setCardFilter('unknown')}
+                  className="flex-1"
+                  disabled={unknownCardCount === 0}
+                >
+                  Unknown Only
+                  <span className="text-xs ml-2 opacity-70">
+                    ({unknownCardCount})
+                  </span>
+                </Button>
+              </div>
+              {unknownCardCount === 0 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  All cards are marked as known. Study all to review them.
+                </p>
+              )}
             </CardContent>
           </Card>
 

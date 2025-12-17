@@ -17,6 +17,7 @@ interface VocabState {
   addFlashcards: (listId: string, flashcards: Omit<Flashcard, 'id'>[]) => void
   updateFlashcard: (listId: string, flashcardId: string, updates: Partial<Omit<Flashcard, 'id'>>) => void
   deleteFlashcard: (listId: string, flashcardId: string) => void
+  setFlashcardKnown: (flashcardId: string, known: boolean) => void
 
   // Tag helpers
   getAllTags: () => string[]
@@ -120,6 +121,17 @@ export const useVocabStore = create<VocabState>()(
                 }
               : list
           ),
+        }))
+      },
+
+      setFlashcardKnown: (flashcardId, known) => {
+        set((state) => ({
+          lists: state.lists.map((list) => ({
+            ...list,
+            flashcards: list.flashcards.map((fc) =>
+              fc.id === flashcardId ? { ...fc, known } : fc
+            ),
+          })),
         }))
       },
 

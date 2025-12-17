@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { AuthButton } from './AuthButton'
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: Home },
+  { path: '/', label: 'Lists', icon: Home },
   { path: '/study', label: 'Study', icon: GraduationCap },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]
