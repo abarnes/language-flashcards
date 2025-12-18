@@ -209,6 +209,35 @@ export function Settings() {
         </CardContent>
       </Card>
 
+      {/* Spaced Repetition Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Spaced Repetition</CardTitle>
+          <CardDescription>
+            Cards are automatically scheduled based on how well you know them
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p>
+              <strong>Again:</strong> Resets the card for more frequent review
+            </p>
+            <p>
+              <strong>Hard:</strong> Increases interval slightly
+            </p>
+            <p>
+              <strong>Good:</strong> Normal interval increase
+            </p>
+            <p>
+              <strong>Easy:</strong> Larger interval increase
+            </p>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Use "Due for Review" in Study mode to see only cards that are ready for review.
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Account - only show if Firebase is configured */}
       {isFirebaseEnabled && (
         <Card>

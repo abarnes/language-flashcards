@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { VocabList, Flashcard } from '@/types'
+import type { VocabList, Flashcard, SRSGrade, StudyDirection } from '@/types'
 import { generateId } from '@/lib/utils'
+import { calculateNextReview, getSRSData } from '@/services/srs'
 
 interface VocabState {
   lists: VocabList[]
@@ -18,6 +19,8 @@ interface VocabState {
   updateFlashcard: (listId: string, flashcardId: string, updates: Partial<Omit<Flashcard, 'id'>>) => void
   deleteFlashcard: (listId: string, flashcardId: string) => void
   setFlashcardKnown: (flashcardId: string, known: boolean) => void
+  reviewFlashcard: (flashcardId: string, grade: SRSGrade, direction: StudyDirection) => void
+  resetFlashcardSRS: (flashcardId: string, direction?: StudyDirection) => void
 
   // Tag helpers
   getAllTags: () => string[]
@@ -131,6 +134,62 @@ export const useVocabStore = create<VocabState>()(
             flashcards: list.flashcards.map((fc) =>
               fc.id === flashcardId ? { ...fc, known } : fc
             ),
+          })),
+        }))
+      },
+
+      reviewFlashcard: (flashcardId, grade, direction) => {
+        set((state) => ({
+          lists: state.lists.map((list) => ({
+            ...list,
+            flashcards: list.flashcards.map((fc) => {
+              if (fc.id !== flashcardId) return fc
+              const currentSRSData = getSRSData(fc, direction)
+              const result = calculateNextReview(currentSRSData, grade)
+              const newSRSData = {
+                lastReviewed: Date.now(),
+                interval: result.interval,
+                easeFactor: result.easeFactor,
+                repetitions: result.repetitions,
+                dueDate: result.dueDate,
+              }
+              return {
+                ...fc,
+                // Update the appropriate direction's SRS data
+                ...(direction === 'normal'
+                  ? { srsNormal: newSRSData }
+                  : { srsReverse: newSRSData }),
+                // Also update legacy 'known' field for backward compatibility
+                known: grade !== 'again',
+              }
+            }),
+          })),
+        }))
+      },
+
+      resetFlashcardSRS: (flashcardId, direction) => {
+        set((state) => ({
+          lists: state.lists.map((list) => ({
+            ...list,
+            flashcards: list.flashcards.map((fc) => {
+              if (fc.id !== flashcardId) return fc
+              // If direction specified, only reset that direction
+              if (direction) {
+                return {
+                  ...fc,
+                  ...(direction === 'normal'
+                    ? { srsNormal: undefined }
+                    : { srsReverse: undefined }),
+                }
+              }
+              // If no direction, reset both
+              return {
+                ...fc,
+                srsNormal: undefined,
+                srsReverse: undefined,
+                known: undefined,
+              }
+            }),
           })),
         }))
       },

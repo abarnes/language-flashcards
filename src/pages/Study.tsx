@@ -4,11 +4,10 @@ import {
   ArrowLeft,
   RotateCcw,
   Shuffle,
-  Check,
-  X,
   ChevronLeft,
   ChevronRight,
   BookOpen,
+  Check,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -16,16 +15,17 @@ import { Badge } from '@/components/ui/badge'
 import { useVocabStore } from '@/stores/vocabStore'
 import { useStudyStore } from '@/stores/studyStore'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { LANGUAGES } from '@/types'
+import { LANGUAGES, type SRSGrade, type StudyDirection } from '@/types'
 import { cn } from '@/lib/utils'
+import { isDue, getPredictedIntervals } from '@/services/srs'
 
-type CardFilter = 'all' | 'unknown'
+type CardFilter = 'all' | 'due'
 
 export function Study() {
   const [searchParams] = useSearchParams()
   const initialListId = searchParams.get('listId')
 
-  const { lists, setFlashcardKnown } = useVocabStore()
+  const { lists, reviewFlashcard } = useVocabStore()
   const {
     session,
     startSession,
@@ -74,7 +74,7 @@ export function Study() {
     ).sort()
   }, [selectedCards])
 
-  // Filter cards by selected tags and known status
+  // Filter cards by selected tags and due status (based on current mode/direction)
   const filteredCards = useMemo(() => {
     let cards = selectedCards
 
@@ -85,43 +85,42 @@ export function Study() {
       )
     }
 
-    // Filter by known status
-    if (cardFilter === 'unknown') {
-      cards = cards.filter((card) => !card.known)
+    // Filter by due status for the selected study direction
+    if (cardFilter === 'due') {
+      cards = cards.filter((card) => isDue(card, mode))
     }
 
     return cards
-  }, [selectedCards, selectedTagFilters, cardFilter])
+  }, [selectedCards, selectedTagFilters, cardFilter, mode])
 
-  // Count unknown cards for UI
-  const unknownCardCount = useMemo(() => {
+  // Count due cards for UI (based on current mode/direction)
+  const dueCardCount = useMemo(() => {
     let cards = selectedCards
     if (selectedTagFilters.length > 0) {
       cards = cards.filter((card) =>
         selectedTagFilters.some((tag) => card.tags.includes(tag))
       )
     }
-    return cards.filter((card) => !card.known).length
-  }, [selectedCards, selectedTagFilters])
+    return cards.filter((card) => isDue(card, mode)).length
+  }, [selectedCards, selectedTagFilters, mode])
 
   const handleStartStudy = () => {
     startSession(filteredCards, mode, undefined, selectedTagFilters)
   }
 
-  // Wrapper functions that persist known status
-  const handleMarkKnown = useCallback(() => {
+  // Handle SRS grade and move to next card
+  const handleGrade = useCallback((grade: SRSGrade) => {
     if (!session) return
     const currentCard = session.cards[session.currentIndex]
-    setFlashcardKnown(currentCard.id, true)
-    storeMarkKnown()
-  }, [session, setFlashcardKnown, storeMarkKnown])
-
-  const handleMarkUnknown = useCallback(() => {
-    if (!session) return
-    const currentCard = session.cards[session.currentIndex]
-    setFlashcardKnown(currentCard.id, false)
-    storeMarkUnknown()
-  }, [session, setFlashcardKnown, storeMarkUnknown])
+    // Pass the study direction to track SRS separately for each direction
+    reviewFlashcard(currentCard.id, grade, session.mode as StudyDirection)
+    // Use existing store methods for session tracking
+    if (grade === 'again') {
+      storeMarkUnknown()
+    } else {
+      storeMarkKnown()
+    }
+  }, [session, reviewFlashcard, storeMarkKnown, storeMarkUnknown])
 
   // Keyboard shortcuts for study session
   const handleKeyDown = useCallback(
@@ -133,15 +132,17 @@ export function Study() {
           e.preventDefault()
           flipCard()
           break
-        case 'k':
-          if (session.isFlipped) {
-            handleMarkKnown()
-          }
+        case '1':
+          if (session.isFlipped) handleGrade('again')
           break
-        case 'u':
-          if (session.isFlipped) {
-            handleMarkUnknown()
-          }
+        case '2':
+          if (session.isFlipped) handleGrade('hard')
+          break
+        case '3':
+          if (session.isFlipped) handleGrade('good')
+          break
+        case '4':
+          if (session.isFlipped) handleGrade('easy')
           break
         case 'arrowleft':
           if (session.currentIndex > 0) {
@@ -152,12 +153,12 @@ export function Study() {
           if (!session.isFlipped) {
             flipCard()
           } else if (session.currentIndex < session.cards.length - 1) {
-            handleMarkUnknown()
+            handleGrade('good')
           }
           break
       }
     },
-    [session, flipCard, handleMarkKnown, handleMarkUnknown, previousCard]
+    [session, flipCard, handleGrade, previousCard]
   )
 
   useEffect(() => {
@@ -291,56 +292,88 @@ export function Study() {
         </div>
 
         {/* Controls */}
-        <div className="flex items-center justify-center gap-3 sm:gap-4">
-          <Button
-            variant="outline"
-            onClick={previousCard}
-            disabled={session.currentIndex === 0}
-            className="h-12 w-12 p-0 sm:h-10 sm:w-10"
-          >
-            <ChevronLeft className="h-6 w-6 sm:h-5 sm:w-5" />
-          </Button>
+        {session.isFlipped ? (
+          <div className="space-y-3">
+            {/* SRS Grade Buttons */}
+            {(() => {
+              const predictions = getPredictedIntervals(currentCard, session.mode as StudyDirection)
+              return (
+                <div className="grid grid-cols-4 gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleGrade('again')}
+                    className="flex-col h-auto py-3 text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    <span className="text-sm font-medium">Again</span>
+                    <span className="text-xs opacity-70">{predictions.again}</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleGrade('hard')}
+                    className="flex-col h-auto py-3 text-orange-600 border-orange-200 hover:bg-orange-50"
+                  >
+                    <span className="text-sm font-medium">Hard</span>
+                    <span className="text-xs opacity-70">{predictions.hard}</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleGrade('good')}
+                    className="flex-col h-auto py-3 text-green-600 border-green-200 hover:bg-green-50"
+                  >
+                    <span className="text-sm font-medium">Good</span>
+                    <span className="text-xs opacity-70">{predictions.good}</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleGrade('easy')}
+                    className="flex-col h-auto py-3 text-blue-600 border-blue-200 hover:bg-blue-50"
+                  >
+                    <span className="text-sm font-medium">Easy</span>
+                    <span className="text-xs opacity-70">{predictions.easy}</span>
+                  </Button>
+                </div>
+              )
+            })()}
 
-          {session.isFlipped ? (
-            <>
+            {/* Navigation */}
+            <div className="flex justify-center gap-2">
               <Button
-                variant="outline"
-                onClick={handleMarkUnknown}
-                className="text-red-600 border-red-200 hover:bg-red-50 h-14 px-5 sm:h-10 sm:px-4"
+                variant="ghost"
+                size="sm"
+                onClick={previousCard}
+                disabled={session.currentIndex === 0}
               >
-                <X className="h-6 w-6 sm:h-5 sm:w-5 sm:mr-2" />
-                <span className="hidden sm:inline">Unknown</span>
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back
               </Button>
-              <Button
-                onClick={handleMarkKnown}
-                className="bg-green-600 hover:bg-green-700 h-14 px-5 sm:h-10 sm:px-4"
-              >
-                <Check className="h-6 w-6 sm:h-5 sm:w-5 sm:mr-2" />
-                <span className="hidden sm:inline">Known</span>
-              </Button>
-            </>
-          ) : (
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-center gap-3">
+            <Button
+              variant="outline"
+              onClick={previousCard}
+              disabled={session.currentIndex === 0}
+              className="h-12 w-12 p-0 sm:h-10 sm:w-10"
+            >
+              <ChevronLeft className="h-6 w-6 sm:h-5 sm:w-5" />
+            </Button>
             <Button onClick={flipCard} className="h-14 px-8 text-base sm:h-10 sm:px-6 sm:text-sm">
               Flip Card
             </Button>
-          )}
-
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (!session.isFlipped) flipCard()
-              else handleMarkUnknown()
-            }}
-            disabled={session.currentIndex === session.cards.length - 1 && session.isFlipped}
-            className="h-12 w-12 p-0 sm:h-10 sm:w-10"
-          >
-            <ChevronRight className="h-6 w-6 sm:h-5 sm:w-5" />
-          </Button>
-        </div>
+            <Button
+              variant="outline"
+              onClick={flipCard}
+              className="h-12 w-12 p-0 sm:h-10 sm:w-10"
+            >
+              <ChevronRight className="h-6 w-6 sm:h-5 sm:w-5" />
+            </Button>
+          </div>
+        )}
 
         {/* Keyboard Shortcuts Hint - hidden on mobile */}
         <p className="hidden sm:block text-center text-xs text-muted-foreground">
-          Space to flip • ← → to navigate • K for known • U for unknown
+          Space to flip • 1-4 for grades • ← → to navigate
         </p>
       </div>
     )
@@ -542,20 +575,20 @@ export function Study() {
                   All Cards
                 </Button>
                 <Button
-                  variant={cardFilter === 'unknown' ? 'default' : 'outline'}
-                  onClick={() => setCardFilter('unknown')}
+                  variant={cardFilter === 'due' ? 'default' : 'outline'}
+                  onClick={() => setCardFilter('due')}
                   className="flex-1"
-                  disabled={unknownCardCount === 0}
+                  disabled={dueCardCount === 0}
                 >
-                  Unknown Only
+                  Due for Review
                   <span className="text-xs ml-2 opacity-70">
-                    ({unknownCardCount})
+                    ({dueCardCount})
                   </span>
                 </Button>
               </div>
-              {unknownCardCount === 0 && (
+              {dueCardCount === 0 && cardFilter === 'due' && (
                 <p className="text-sm text-muted-foreground mt-2">
-                  All cards are marked as known. Study all to review them.
+                  No cards due for review right now. Come back later!
                 </p>
               )}
             </CardContent>

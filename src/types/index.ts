@@ -1,5 +1,28 @@
 // Core data types for Language Flashcards application
 
+// SRS data for a single direction
+export interface SRSData {
+  lastReviewed?: number // timestamp of last review
+  interval?: number // current interval in days
+  easeFactor?: number // difficulty multiplier (default 2.5, min 1.3)
+  repetitions?: number // number of successful reviews in a row
+  dueDate?: number // timestamp when card is due for review
+}
+
+// SRS Grade options (SM-2 algorithm)
+export type SRSGrade = 'again' | 'hard' | 'good' | 'easy'
+
+// Study direction
+export type StudyDirection = 'normal' | 'reverse'
+
+// SRS calculation result
+export interface SRSResult {
+  interval: number // new interval in days
+  easeFactor: number
+  repetitions: number
+  dueDate: number
+}
+
 export interface Flashcard {
   id: string
   source: string
@@ -9,12 +32,11 @@ export interface Flashcard {
   example?: string
   notes?: string
   tags: string[]
-  // Study tracking
+  // Study tracking (legacy)
   known?: boolean
-  // SRS fields (for future use)
-  lastReviewed?: number
-  interval?: number
-  easeFactor?: number
+  // SRS data per direction
+  srsNormal?: SRSData // source → target
+  srsReverse?: SRSData // target → source
 }
 
 export interface VocabList {
