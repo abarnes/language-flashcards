@@ -60,10 +60,15 @@ export async function extractVocabFromImage(
       .replace(/SOURCE_LANG/g, sourceLang)
       .replace(/TARGET_LANG/g, targetLang)
 
+    // 5 minute timeout for large images that take a while to process
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000)
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
       {
         method: 'POST',
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -88,6 +93,8 @@ export async function extractVocabFromImage(
         }),
       }
     )
+
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
@@ -176,6 +183,12 @@ export async function extractVocabFromImage(
       }
     }
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        success: false,
+        error: 'Request timed out after 5 minutes. Try with a smaller image.',
+      }
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
