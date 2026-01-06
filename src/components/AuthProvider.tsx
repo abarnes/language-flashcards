@@ -77,6 +77,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     async function handleAuthChange() {
+      // Wait for zustand persist to finish rehydrating from localStorage
+      // This prevents race conditions where we overwrite localStorage data
+      // before it's been loaded into the store
+      const waitForHydration = async () => {
+        const stores = [useVocabStore, useSettingsStore]
+        await Promise.all(
+          stores.map((store) =>
+            store.persist.hasHydrated()
+              ? Promise.resolve()
+              : new Promise<void>((resolve) => {
+                  const unsub = store.persist.onFinishHydration(() => {
+                    unsub()
+                    resolve()
+                  })
+                })
+          )
+        )
+      }
+      await waitForHydration()
       const localStorage = createLocalStorageProvider()
 
       if (currentUserId) {
@@ -92,19 +111,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLocalDataCount(localLists.length)
           setShowMigrationDialog(true)
         } else {
-          // Load from Firestore
-          const [lists, settings] = await Promise.all([
-            firestore.loadLists(),
-            firestore.loadSettings(),
-          ])
+          // Compare localStorage vs Firestore data to avoid losing unsaved changes
+          // Count total flashcards in each source
+          const currentState = useVocabStore.getState().lists
+          const currentFlashcardCount = currentState.reduce(
+            (sum, list) => sum + list.flashcards.length,
+            0
+          )
+          const firestoreFlashcardCount = firestoreLists.reduce(
+            (sum, list) => sum + list.flashcards.length,
+            0
+          )
 
-          useVocabStore.getState()._hydrate(lists)
-          if (settings) {
-            // Keep local apiKey, merge other settings
-            const localSettings = useSettingsStore.getState().settings
-            useSettingsStore.getState()._hydrate({
-              ...settings,
-              apiKey: localSettings.apiKey, // Keep local API key
+          // Only hydrate from Firestore if it has at least as much data
+          // This prevents overwriting localStorage data if Firestore save failed
+          if (firestoreFlashcardCount >= currentFlashcardCount) {
+            useVocabStore.getState()._hydrate(firestoreLists)
+
+            const firestoreSettings = await firestore.loadSettings()
+            if (firestoreSettings) {
+              // Keep local apiKey, merge other settings
+              const localSettings = useSettingsStore.getState().settings
+              useSettingsStore.getState()._hydrate({
+                ...firestoreSettings,
+                apiKey: localSettings.apiKey, // Keep local API key
+              })
+            }
+          } else {
+            // Keep current state (from localStorage), but sync it to Firestore
+            console.log(
+              `Keeping localStorage data (${currentFlashcardCount} cards) over Firestore (${firestoreFlashcardCount} cards)`
+            )
+            // Save current state to Firestore to sync it
+            firestore.saveLists(currentState).catch((err) => {
+              console.error('Failed to sync localStorage to Firestore:', err)
             })
           }
 
