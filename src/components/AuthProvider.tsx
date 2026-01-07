@@ -111,21 +111,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLocalDataCount(localLists.length)
           setShowMigrationDialog(true)
         } else {
-          // Compare localStorage vs Firestore data to avoid losing unsaved changes
-          // Count total flashcards in each source
+          // Always trust localStorage as the source of truth for what user last did
+          // localStorage is updated synchronously, Firestore saves may be delayed/failed
           const currentState = useVocabStore.getState().lists
-          const currentFlashcardCount = currentState.reduce(
-            (sum, list) => sum + list.flashcards.length,
-            0
-          )
-          const firestoreFlashcardCount = firestoreLists.reduce(
-            (sum, list) => sum + list.flashcards.length,
-            0
-          )
+          const hasLocalData = currentState.length > 0
 
-          // Only hydrate from Firestore if it has at least as much data
-          // This prevents overwriting localStorage data if Firestore save failed
-          if (firestoreFlashcardCount >= currentFlashcardCount) {
+          if (hasLocalData) {
+            // User has local data - keep it and sync to Firestore
+            // This ensures deletes, edits, and adds all persist correctly
+            console.log('Using localStorage data, syncing to Firestore')
+            firestore.saveLists(currentState).catch((err) => {
+              console.error('Failed to sync localStorage to Firestore:', err)
+            })
+          } else if (firestoreLists.length > 0) {
+            // No local data but Firestore has data - load from Firestore
+            // This handles first load on a new device
             useVocabStore.getState()._hydrate(firestoreLists)
 
             const firestoreSettings = await firestore.loadSettings()
@@ -137,15 +137,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 apiKey: localSettings.apiKey, // Keep local API key
               })
             }
-          } else {
-            // Keep current state (from localStorage), but sync it to Firestore
-            console.log(
-              `Keeping localStorage data (${currentFlashcardCount} cards) over Firestore (${firestoreFlashcardCount} cards)`
-            )
-            // Save current state to Firestore to sync it
-            firestore.saveLists(currentState).catch((err) => {
-              console.error('Failed to sync localStorage to Firestore:', err)
-            })
           }
 
           // Set up Firestore persistence

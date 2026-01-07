@@ -12,28 +12,27 @@ const EXTRACTION_PROMPT = `You are parsing vocabulary lists from textbook pages.
 Extract all vocabulary entries for the language pair:
 SOURCE_LANG → TARGET_LANG.
 
-Return JSON ONLY using the schema:
+CRITICAL: The "source" field MUST contain the SOURCE_LANG word, and "target" MUST contain the TARGET_LANG translation.
+For example, if extracting English → Czech: { "source": "city", "target": "město" }
+NOT the reverse: { "source": "město", "target": "city" } ← THIS IS WRONG
+
+Return JSON ONLY using this exact schema:
 [
   {
-    "source": "...",
-    "target": "...",
-    "gender": "...",
-    "partOfSpeech": "...",
-    "example": "...",
-    "notes": ""
+    "source": "[SOURCE_LANG word]",
+    "target": "[TARGET_LANG translation]",
+    "gender": "m/f/n or empty",
+    "partOfSpeech": "noun/verb/adjective/etc or empty",
+    "example": "example sentence or empty",
+    "notes": "additional info or empty"
   }
 ]
 
-Important:
-- "source" is the word in SOURCE_LANG
-- "target" is the translation in TARGET_LANG
-- "gender" should be "m", "f", "n", or empty if not applicable
-- "partOfSpeech" should be "noun", "verb", "adjective", "adverb", etc. or empty
-- "example" is an example sentence if visible, otherwise empty
-- "notes" for any additional info or empty
-
-Ignore headings, numbering, unrelated text, example sentences unless they directly illustrate the vocabulary word, and any non-vocabulary content.
-Do not include explanations or comments. Return only valid JSON array.`
+Rules:
+- "source" = the word in SOURCE_LANG (the language being learned FROM)
+- "target" = the translation in TARGET_LANG (the language being learned TO)
+- Ignore headings, numbering, unrelated text
+- Return only valid JSON array, no explanations`
 
 export async function extractVocabFromImage(
   apiKey: string,
