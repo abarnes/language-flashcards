@@ -37,10 +37,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Subscribe to vocab store changes
     const unsubVocab = useVocabStore.subscribe((state) => {
       if (state.lists !== previousLists) {
+        // Detect deleted lists and remove them from Firestore
+        const currentIds = new Set(state.lists.map((l) => l.id))
+        const deletedLists = previousLists.filter((l) => !currentIds.has(l.id))
+
+        // Delete removed lists from Firestore
+        for (const list of deletedLists) {
+          firestore.deleteList(list.id).catch((err) => {
+            console.error('Failed to delete list from Firestore:', err)
+          })
+        }
+
         previousLists = state.lists
-        firestore.saveLists(state.lists).catch((err) => {
-          console.error('Failed to save lists to Firestore:', err)
-        })
+
+        // Save the remaining lists
+        if (state.lists.length > 0) {
+          firestore.saveLists(state.lists).catch((err) => {
+            console.error('Failed to save lists to Firestore:', err)
+          })
+        }
       }
     })
 
@@ -113,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setShowMigrationDialog(true)
         } else {
           // Merge localStorage and Firestore data by timestamp
-          // For each list, keep the version with the newer lastModified
+          // Firestore is the source of truth for what exists
           const currentState = useVocabStore.getState().lists
 
           // Helper to get lastModified with backward compatibility
@@ -124,35 +139,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const localMap = new Map(currentState.map((l) => [l.id, l]))
           const firestoreMap = new Map(firestoreLists.map((l) => [l.id, l]))
 
-          // Merge: for each unique list ID, keep the newer version
-          const allIds = new Set([...localMap.keys(), ...firestoreMap.keys()])
+          // Merge strategy:
+          // - If in both: keep the one with newer lastModified
+          // - If only in Firestore: include it (created on another device)
+          // - If only in localStorage: DON'T include (was deleted on another device)
+          //   Exception: if it was created very recently (within last 30 seconds),
+          //   it might just not have synced yet
+          const now = Date.now()
+          const RECENT_THRESHOLD = 30 * 1000 // 30 seconds
+
           const mergedLists: VocabList[] = []
 
-          for (const id of allIds) {
+          // Process all Firestore lists first (source of truth for existence)
+          for (const [id, remote] of firestoreMap) {
             const local = localMap.get(id)
-            const remote = firestoreMap.get(id)
-
-            if (local && remote) {
+            if (local) {
               // Both exist - keep the one with newer lastModified
               const localTime = getLastModified(local)
               const remoteTime = getLastModified(remote)
               mergedLists.push(localTime >= remoteTime ? local : remote)
-            } else if (local) {
-              // Only in localStorage
-              mergedLists.push(local)
-            } else if (remote) {
-              // Only in Firestore
+            } else {
+              // Only in Firestore - include it
               mergedLists.push(remote)
+            }
+          }
+
+          // Only add localStorage-only lists if they were created very recently
+          // (haven't had time to sync yet)
+          for (const [id, local] of localMap) {
+            if (!firestoreMap.has(id)) {
+              const createdAt = local.createdAt ?? 0
+              if (now - createdAt < RECENT_THRESHOLD) {
+                // Recently created, probably just hasn't synced yet
+                mergedLists.push(local)
+              }
+              // Otherwise, it was deleted on another device - don't restore
             }
           }
 
           // Update state with merged lists
           useVocabStore.getState()._hydrate(mergedLists)
 
-          // Sync merged result to Firestore
-          firestore.saveLists(mergedLists).catch((err) => {
-            console.error('Failed to sync merged lists to Firestore:', err)
-          })
+          // Sync merged result to Firestore (only if there are new local items)
+          const newLocalItems = mergedLists.filter(
+            (l) => !firestoreMap.has(l.id)
+          )
+          if (newLocalItems.length > 0) {
+            firestore.saveLists(mergedLists).catch((err) => {
+              console.error('Failed to sync merged lists to Firestore:', err)
+            })
+          }
 
           // Load settings from Firestore if available
           const firestoreSettings = await firestore.loadSettings()
