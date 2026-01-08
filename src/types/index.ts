@@ -43,6 +43,7 @@ export interface VocabList {
   id: string
   name: string
   createdAt: number
+  lastModified: number // timestamp of last modification for sync
   tags: string[]
   flashcards: Flashcard[]
 }

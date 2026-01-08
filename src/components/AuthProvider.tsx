@@ -6,6 +6,7 @@ import { createLocalStorageProvider } from '@/services/storage/localStorageProvi
 import { createFirestoreProvider } from '@/services/storage/firestoreProvider'
 import { isFirebaseConfigured } from '@/services/firebase'
 import { AuthContext } from '@/hooks/useAuth'
+import type { VocabList } from '@/types'
 import {
   Dialog,
   DialogContent,
@@ -111,32 +112,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLocalDataCount(localLists.length)
           setShowMigrationDialog(true)
         } else {
-          // Always trust localStorage as the source of truth for what user last did
-          // localStorage is updated synchronously, Firestore saves may be delayed/failed
+          // Merge localStorage and Firestore data by timestamp
+          // For each list, keep the version with the newer lastModified
           const currentState = useVocabStore.getState().lists
-          const hasLocalData = currentState.length > 0
 
-          if (hasLocalData) {
-            // User has local data - keep it and sync to Firestore
-            // This ensures deletes, edits, and adds all persist correctly
-            console.log('Using localStorage data, syncing to Firestore')
-            firestore.saveLists(currentState).catch((err) => {
-              console.error('Failed to sync localStorage to Firestore:', err)
-            })
-          } else if (firestoreLists.length > 0) {
-            // No local data but Firestore has data - load from Firestore
-            // This handles first load on a new device
-            useVocabStore.getState()._hydrate(firestoreLists)
+          // Helper to get lastModified with backward compatibility
+          const getLastModified = (list: VocabList) =>
+            list.lastModified ?? list.createdAt ?? 0
 
-            const firestoreSettings = await firestore.loadSettings()
-            if (firestoreSettings) {
-              // Keep local apiKey, merge other settings
-              const localSettings = useSettingsStore.getState().settings
-              useSettingsStore.getState()._hydrate({
-                ...firestoreSettings,
-                apiKey: localSettings.apiKey, // Keep local API key
-              })
+          // Build a map of all lists by ID
+          const localMap = new Map(currentState.map((l) => [l.id, l]))
+          const firestoreMap = new Map(firestoreLists.map((l) => [l.id, l]))
+
+          // Merge: for each unique list ID, keep the newer version
+          const allIds = new Set([...localMap.keys(), ...firestoreMap.keys()])
+          const mergedLists: VocabList[] = []
+
+          for (const id of allIds) {
+            const local = localMap.get(id)
+            const remote = firestoreMap.get(id)
+
+            if (local && remote) {
+              // Both exist - keep the one with newer lastModified
+              const localTime = getLastModified(local)
+              const remoteTime = getLastModified(remote)
+              mergedLists.push(localTime >= remoteTime ? local : remote)
+            } else if (local) {
+              // Only in localStorage
+              mergedLists.push(local)
+            } else if (remote) {
+              // Only in Firestore
+              mergedLists.push(remote)
             }
+          }
+
+          // Update state with merged lists
+          useVocabStore.getState()._hydrate(mergedLists)
+
+          // Sync merged result to Firestore
+          firestore.saveLists(mergedLists).catch((err) => {
+            console.error('Failed to sync merged lists to Firestore:', err)
+          })
+
+          // Load settings from Firestore if available
+          const firestoreSettings = await firestore.loadSettings()
+          if (firestoreSettings) {
+            // Keep local apiKey, merge other settings
+            const localSettings = useSettingsStore.getState().settings
+            useSettingsStore.getState()._hydrate({
+              ...firestoreSettings,
+              apiKey: localSettings.apiKey, // Keep local API key
+            })
           }
 
           // Set up Firestore persistence
