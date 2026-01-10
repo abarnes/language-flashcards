@@ -240,16 +240,31 @@ export function Study() {
           className="cursor-pointer"
           onClick={flipCard}
         >
-          <Card className="min-h-[300px] transition-all duration-300">
+          <Card className={cn(
+            "min-h-[300px] transition-all duration-300 border-2",
+            !session.isFlipped
+              ? (session.mode === 'normal' ? "border-[var(--color-source)]/30 bg-[var(--color-source-muted)]" : "border-[var(--color-target)]/30 bg-[var(--color-target-muted)]")
+              : (session.mode === 'normal' ? "border-[var(--color-target)]/30 bg-[var(--color-target-muted)]" : "border-[var(--color-source)]/30 bg-[var(--color-source-muted)]")
+          )}>
             <CardContent className="flex items-center justify-center h-full min-h-[300px] p-8">
               <div className="text-center">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                <p className={cn(
+                  "text-xs uppercase tracking-wide mb-2 font-medium",
+                  !session.isFlipped
+                    ? (session.mode === 'normal' ? "text-[var(--color-source)]" : "text-[var(--color-target)]")
+                    : (session.mode === 'normal' ? "text-[var(--color-target)]" : "text-[var(--color-source)]")
+                )}>
                   {session.isFlipped
-                    ? (session.mode === 'normal' ? 'Answer' : 'Question')
-                    : (session.mode === 'normal' ? 'Question' : 'Answer')
+                    ? (session.mode === 'normal' ? targetLangName : sourceLangName)
+                    : (session.mode === 'normal' ? sourceLangName : targetLangName)
                   }
                 </p>
-                <p className="text-3xl font-bold mb-4">
+                <p className={cn(
+                  "text-3xl font-bold mb-4",
+                  !session.isFlipped
+                    ? (session.mode === 'normal' ? "text-[var(--color-source-foreground)]" : "text-[var(--color-target-foreground)]")
+                    : (session.mode === 'normal' ? "text-[var(--color-target-foreground)]" : "text-[var(--color-source-foreground)]")
+                )}>
                   {session.isFlipped ? backText : frontText}
                 </p>
                 {showHintsOnFront && (currentCard.gender || currentCard.partOfSpeech) && (
@@ -544,8 +559,13 @@ export function Study() {
                   className="flex-1 flex-col h-auto py-3 sm:flex-row sm:py-2"
                 >
                   <span>Normal</span>
-                  <span className="text-xs opacity-70 sm:ml-2">
-                    {sourceLangName} → {targetLangName}
+                  <span className={cn(
+                    "text-xs sm:ml-2 flex items-center gap-1",
+                    mode === 'normal' ? "opacity-80" : "opacity-70"
+                  )}>
+                    <span className={mode !== 'normal' ? "text-[var(--color-source)]" : ""}>{sourceLangName}</span>
+                    <span>→</span>
+                    <span className={mode !== 'normal' ? "text-[var(--color-target)]" : ""}>{targetLangName}</span>
                   </span>
                 </Button>
                 <Button
@@ -554,8 +574,13 @@ export function Study() {
                   className="flex-1 flex-col h-auto py-3 sm:flex-row sm:py-2"
                 >
                   <span>Reverse</span>
-                  <span className="text-xs opacity-70 sm:ml-2">
-                    {targetLangName} → {sourceLangName}
+                  <span className={cn(
+                    "text-xs sm:ml-2 flex items-center gap-1",
+                    mode === 'reverse' ? "opacity-80" : "opacity-70"
+                  )}>
+                    <span className={mode !== 'reverse' ? "text-[var(--color-target)]" : ""}>{targetLangName}</span>
+                    <span>→</span>
+                    <span className={mode !== 'reverse' ? "text-[var(--color-source)]" : ""}>{sourceLangName}</span>
                   </span>
                 </Button>
               </div>

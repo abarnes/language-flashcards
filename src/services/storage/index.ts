@@ -1,4 +1,4 @@
-import type { VocabList, Settings } from '@/types'
+import type { VocabList, Settings, DailyStats } from '@/types'
 
 export interface StorageProvider {
   // Vocab lists
@@ -10,6 +10,10 @@ export interface StorageProvider {
   // Settings
   loadSettings(): Promise<Settings | null>
   saveSettings(settings: Settings): Promise<void>
+
+  // Daily stats
+  loadDailyStats(startDate: string, endDate: string): Promise<DailyStats[]>
+  saveDailyStats(stats: DailyStats): Promise<void>
 
   // Utility
   clearAll(): Promise<void>

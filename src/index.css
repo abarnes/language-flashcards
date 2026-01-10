@@ -3,27 +3,51 @@
 @theme {
   --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(222.2 84% 4.9%);
+  /* Modern warm palette with good contrast */
+  --color-background: hsl(45 30% 97%);
+  --color-foreground: hsl(220 25% 18%);
   --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(222.2 84% 4.9%);
+  --color-card-foreground: hsl(220 25% 18%);
   --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(222.2 84% 4.9%);
-  --color-primary: hsl(221.2 83.2% 53.3%);
-  --color-primary-foreground: hsl(210 40% 98%);
-  --color-secondary: hsl(210 40% 96.1%);
-  --color-secondary-foreground: hsl(222.2 47.4% 11.2%);
-  --color-muted: hsl(210 40% 96.1%);
-  --color-muted-foreground: hsl(215.4 16.3% 46.9%);
-  --color-accent: hsl(210 40% 96.1%);
-  --color-accent-foreground: hsl(222.2 47.4% 11.2%);
-  --color-destructive: hsl(0 84.2% 60.2%);
-  --color-destructive-foreground: hsl(210 40% 98%);
-  --color-border: hsl(214.3 31.8% 91.4%);
-  --color-input: hsl(214.3 31.8% 91.4%);
-  --color-ring: hsl(221.2 83.2% 53.3%);
+  --color-popover-foreground: hsl(220 25% 18%);
 
-  --radius-lg: 0.5rem;
+  /* Primary: deep slate blue - high contrast, professional */
+  --color-primary: hsl(220 60% 45%);
+  --color-primary-foreground: hsl(0 0% 100%);
+
+  /* Secondary: warm sand */
+  --color-secondary: hsl(40 25% 91%);
+  --color-secondary-foreground: hsl(220 20% 25%);
+
+  /* Muted elements */
+  --color-muted: hsl(45 20% 93%);
+  --color-muted-foreground: hsl(220 15% 45%);
+
+  /* Accent: soft blue tint for hovers */
+  --color-accent: hsl(220 30% 95%);
+  --color-accent-foreground: hsl(220 60% 40%);
+
+  /* Destructive: clear red with good contrast */
+  --color-destructive: hsl(0 70% 50%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  /* Borders and inputs - warm gray */
+  --color-border: hsl(40 20% 85%);
+  --color-input: hsl(40 20% 85%);
+  --color-ring: hsl(220 60% 45%);
+
+  /* Language-specific colors for flashcards */
+  /* Source language: warm terracotta - represents familiar/native */
+  --color-source: hsl(18 75% 48%);
+  --color-source-muted: hsl(25 70% 96%);
+  --color-source-foreground: hsl(18 70% 28%);
+
+  /* Target language: deep teal - represents learning/new */
+  --color-target: hsl(175 60% 35%);
+  --color-target-muted: hsl(175 45% 95%);
+  --color-target-foreground: hsl(175 55% 22%);
+
+  --radius-lg: 0.625rem;
   --radius-md: calc(var(--radius-lg) - 2px);
   --radius-sm: calc(var(--radius-lg) - 4px);
 }

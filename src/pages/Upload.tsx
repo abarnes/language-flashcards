@@ -260,12 +260,15 @@ export function Upload() {
                 Click the button below to extract vocabulary from this image using Gemini AI.
               </p>
 
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm">
-                  <strong>Source:</strong> {sourceLangName}
-                  <br />
-                  <strong>Target:</strong> {targetLangName}
-                </p>
+              <div className="p-4 bg-muted rounded-lg flex flex-wrap gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-[var(--color-source)]"></div>
+                  <span className="text-sm"><strong>Source:</strong> {sourceLangName}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-[var(--color-target)]"></div>
+                  <span className="text-sm"><strong>Target:</strong> {targetLangName}</span>
+                </div>
               </div>
 
               <Button
@@ -330,23 +333,25 @@ export function Upload() {
                 >
                   <div className="flex-1 grid gap-2 sm:grid-cols-2">
                     <div>
-                      <Label className="text-xs">Source</Label>
+                      <Label className="text-xs text-[var(--color-source)] font-medium">Source</Label>
                       <Input
                         value={item.source}
                         onChange={(e) =>
                           handleEditVocab(index, 'source', e.target.value)
                         }
                         placeholder="Source word"
+                        className="border-[var(--color-source)]/30 focus-visible:ring-[var(--color-source)]/50"
                       />
                     </div>
                     <div>
-                      <Label className="text-xs">Target</Label>
+                      <Label className="text-xs text-[var(--color-target)] font-medium">Target</Label>
                       <Input
                         value={item.target}
                         onChange={(e) =>
                           handleEditVocab(index, 'target', e.target.value)
                         }
                         placeholder="Target word"
+                        className="border-[var(--color-target)]/30 focus-visible:ring-[var(--color-target)]/50"
                       />
                     </div>
                   </div>

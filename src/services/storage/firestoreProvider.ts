@@ -6,16 +6,19 @@ import {
   setDoc,
   deleteDoc,
   writeBatch,
+  query,
+  where,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import type { StorageProvider } from './index'
-import type { VocabList, Settings } from '@/types'
+import type { VocabList, Settings, DailyStats } from '@/types'
 
 export function createFirestoreProvider(uid: string): StorageProvider {
   if (!db) throw new Error('Firestore not initialized')
 
   const listsRef = collection(db, 'users', uid, 'lists')
   const settingsDocRef = doc(db, 'users', uid, 'settings', 'user')
+  const statsRef = collection(db, 'users', uid, 'dailyStats')
 
   return {
     async loadLists(): Promise<VocabList[]> {
@@ -50,10 +53,26 @@ export function createFirestoreProvider(uid: string): StorageProvider {
       await setDoc(settingsDocRef, cloudSettings)
     },
 
+    async loadDailyStats(startDate: string, endDate: string): Promise<DailyStats[]> {
+      const q = query(
+        statsRef,
+        where('date', '>=', startDate),
+        where('date', '<=', endDate)
+      )
+      const snapshot = await getDocs(q)
+      return snapshot.docs.map((docSnap) => docSnap.data() as DailyStats)
+    },
+
+    async saveDailyStats(stats: DailyStats): Promise<void> {
+      await setDoc(doc(statsRef, stats.date), stats)
+    },
+
     async clearAll(): Promise<void> {
       const snapshot = await getDocs(listsRef)
+      const statsSnapshot = await getDocs(statsRef)
       const batch = writeBatch(db!)
       snapshot.docs.forEach((docSnap) => batch.delete(docSnap.ref))
+      statsSnapshot.docs.forEach((docSnap) => batch.delete(docSnap.ref))
       batch.delete(settingsDocRef)
       await batch.commit()
     },

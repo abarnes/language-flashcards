@@ -299,19 +299,21 @@ export function ListDetail() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label>Source Word</Label>
+              <Label className="text-[var(--color-source)] font-medium">Source Word</Label>
               <Input
                 placeholder="Enter source word..."
                 value={newCard.source}
                 onChange={(e) => setNewCard({ ...newCard, source: e.target.value })}
+                className="border-[var(--color-source)]/30 focus-visible:ring-[var(--color-source)]/50"
               />
             </div>
             <div>
-              <Label>Target Word</Label>
+              <Label className="text-[var(--color-target)] font-medium">Target Word</Label>
               <Input
                 placeholder="Enter target word..."
                 value={newCard.target}
                 onChange={(e) => setNewCard({ ...newCard, target: e.target.value })}
+                className="border-[var(--color-target)]/30 focus-visible:ring-[var(--color-target)]/50"
               />
             </div>
             <div>
@@ -377,14 +379,14 @@ function FlashcardRow({
           <Input
             value={editedSource}
             onChange={(e) => setEditedSource(e.target.value)}
-            className="flex-1"
+            className="flex-1 border-[var(--color-source)]/30 focus-visible:ring-[var(--color-source)]/50"
             placeholder="Source"
           />
           <span className="text-muted-foreground">→</span>
           <Input
             value={editedTarget}
             onChange={(e) => setEditedTarget(e.target.value)}
-            className="flex-1"
+            className="flex-1 border-[var(--color-target)]/30 focus-visible:ring-[var(--color-target)]/50"
             placeholder="Target"
           />
         </div>
@@ -413,9 +415,13 @@ function FlashcardRow({
   return (
     <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors group">
       <div className="flex-1 flex flex-wrap items-center gap-2">
-        <span className="font-medium">{card.source}</span>
+        <span className="font-medium text-[var(--color-source-foreground)] bg-[var(--color-source-muted)] px-2 py-0.5 rounded">
+          {card.source}
+        </span>
         <span className="text-muted-foreground">→</span>
-        <span>{card.target}</span>
+        <span className="font-medium text-[var(--color-target-foreground)] bg-[var(--color-target-muted)] px-2 py-0.5 rounded">
+          {card.target}
+        </span>
         {card.tags.length > 0 && (
           <div className="flex gap-1 ml-2">
             {card.tags.map((tag) => (

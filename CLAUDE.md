@@ -140,3 +140,10 @@ npx tsc --noEmit     # Check types without emitting
 - Spaced repetition (SRS)
 - UI themes
 - Cloud sync
+
+## Active Technologies
+- TypeScript 5.9+ (strict mode enabled) + React 19, Zustand 5, Firebase 12, Vite 7, Tailwind CSS 4, ShadCN UI (008-progress-dashboard)
+- LocalStorage (MVP) + Firestore (optional sync via StorageProvider interface) (008-progress-dashboard)
+
+## Recent Changes
+- 008-progress-dashboard: Added TypeScript 5.9+ (strict mode enabled) + React 19, Zustand 5, Firebase 12, Vite 7, Tailwind CSS 4, ShadCN UI

@@ -1,8 +1,9 @@
 import type { StorageProvider } from './index'
-import type { VocabList, Settings } from '@/types'
+import type { VocabList, Settings, DailyStats } from '@/types'
 
 const VOCAB_KEY = 'flashcards-vocab'
 const SETTINGS_KEY = 'flashcards-settings'
+const DAILY_STATS_KEY = 'flashcards-daily-stats'
 
 export function createLocalStorageProvider(): StorageProvider {
   return {
@@ -53,9 +54,30 @@ export function createLocalStorageProvider(): StorageProvider {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify({ state: { settings }, version: 0 }))
     },
 
+    async loadDailyStats(startDate: string, endDate: string): Promise<DailyStats[]> {
+      const data = localStorage.getItem(DAILY_STATS_KEY)
+      if (!data) return []
+      try {
+        const allStats: Record<string, DailyStats> = JSON.parse(data)
+        return Object.values(allStats).filter(
+          (s) => s.date >= startDate && s.date <= endDate
+        )
+      } catch {
+        return []
+      }
+    },
+
+    async saveDailyStats(stats: DailyStats): Promise<void> {
+      const data = localStorage.getItem(DAILY_STATS_KEY)
+      const allStats: Record<string, DailyStats> = data ? JSON.parse(data) : {}
+      allStats[stats.date] = stats
+      localStorage.setItem(DAILY_STATS_KEY, JSON.stringify(allStats))
+    },
+
     async clearAll(): Promise<void> {
       localStorage.removeItem(VOCAB_KEY)
       localStorage.removeItem(SETTINGS_KEY)
+      localStorage.removeItem(DAILY_STATS_KEY)
     },
   }
 }

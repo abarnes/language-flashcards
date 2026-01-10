@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import type { VocabList, Flashcard, SRSGrade, StudyDirection } from '@/types'
 import { generateId } from '@/lib/utils'
 import { calculateNextReview, getSRSData } from '@/services/srs'
+import { useStatsStore } from './statsStore'
 
 interface VocabState {
   lists: VocabList[]
@@ -26,6 +27,9 @@ interface VocabState {
   getAllTags: () => string[]
   getListTags: () => string[]
   getFlashcardTags: () => string[]
+
+  // Lookup helpers
+  findListIdByFlashcard: (flashcardId: string) => string | null
 
   // Bulk operations
   importLists: (lists: VocabList[]) => void
@@ -148,6 +152,9 @@ export const useVocabStore = create<VocabState>()(
       },
 
       reviewFlashcard: (flashcardId, grade, direction) => {
+        // Find the list containing this flashcard before updating
+        const listId = get().findListIdByFlashcard(flashcardId)
+
         set((state) => ({
           lists: state.lists.map((list) => {
             const hasCard = list.flashcards.some((fc) => fc.id === flashcardId)
@@ -179,6 +186,12 @@ export const useVocabStore = create<VocabState>()(
             }
           }),
         }))
+
+        // Record review in stats store (good/easy = correct, again/hard = incorrect)
+        if (listId) {
+          const isCorrect = grade === 'good' || grade === 'easy'
+          useStatsStore.getState().recordReview(listId, isCorrect)
+        }
       },
 
       resetFlashcardSRS: (flashcardId, direction) => {
@@ -243,6 +256,16 @@ export const useVocabStore = create<VocabState>()(
           })
         })
         return Array.from(tags).sort()
+      },
+
+      findListIdByFlashcard: (flashcardId) => {
+        const { lists } = get()
+        for (const list of lists) {
+          if (list.flashcards.some((fc) => fc.id === flashcardId)) {
+            return list.id
+          }
+        }
+        return null
       },
 
       importLists: (lists) => {

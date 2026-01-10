@@ -97,6 +97,19 @@ export interface StudySession {
   isComplete: boolean
 }
 
+// Daily review statistics aggregate
+export interface DailyStats {
+  date: string // ISO date "YYYY-MM-DD"
+  reviews: number // Total reviews completed this day
+  correct: number // Correct (good/easy) reviews
+  byList: {
+    [listId: string]: {
+      reviews: number
+      correct: number
+    }
+  }
+}
+
 // Gemini extraction result
 export interface ExtractedVocab {
   source: string

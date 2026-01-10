@@ -1,27 +1,43 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Plus, Upload, BookOpen, Tag } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Plus, Upload, BookOpen, Target, Flame, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { useVocabStore } from '@/stores/vocabStore'
-import { formatDate } from '@/lib/utils'
+import { useProgressMetrics } from '@/hooks/useProgressMetrics'
+import { StatsCard } from '@/components/dashboard/StatsCard'
+import { ListBreakdown } from '@/components/dashboard/ListBreakdown'
+import { WeeklyChart } from '@/components/dashboard/WeeklyChart'
+import { LearningOverview } from '@/components/dashboard/LearningOverview'
+import { ForecastChart } from '@/components/dashboard/ForecastChart'
 
 export function Dashboard() {
-  const { lists, createList, getListTags } = useVocabStore()
+  const navigate = useNavigate()
+  const { lists, createList } = useVocabStore()
+  const metrics = useProgressMetrics()
   const [showNewListDialog, setShowNewListDialog] = useState(false)
   const [newListName, setNewListName] = useState('')
-  const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [, setRefreshKey] = useState(0)
 
-  const allTags = getListTags()
-
-  const filteredLists = selectedTag
-    ? lists.filter((list) => list.tags.includes(selectedTag))
-    : lists
-
-  const sortedLists = [...filteredLists].sort((a, b) => b.createdAt - a.createdAt)
+  // Refresh metrics when tab becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setRefreshKey((k) => k + 1)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () =>
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [])
 
   const handleCreateList = () => {
     if (newListName.trim()) {
@@ -31,14 +47,21 @@ export function Dashboard() {
     }
   }
 
+  const handleStudyDue = () => {
+    navigate('/study?due=true')
+  }
+
+  const totalCards = lists.reduce((sum, l) => sum + l.flashcards.length, 0)
+  const hasCards = totalCards > 0
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Lists</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
-            Manage your vocabulary lists and flashcards
+            Track your learning progress and review vocabulary
           </p>
         </div>
         <div className="flex gap-2">
@@ -55,44 +78,17 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Tag Filter */}
-      {allTags.length > 0 && (
-        <div className="flex flex-wrap gap-2 items-center">
-          <Tag className="h-4 w-4 text-muted-foreground" />
-          <button
-            onClick={() => setSelectedTag(null)}
-            className={`text-sm px-3 py-1 rounded-full transition-colors ${
-              selectedTag === null
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-            }`}
-          >
-            All
-          </button>
-          {allTags.map((tag) => (
-            <button
-              key={tag}
-              onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
-              className={`text-sm px-3 py-1 rounded-full transition-colors ${
-                selectedTag === tag
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-              }`}
-            >
-              {tag}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Lists Grid */}
-      {sortedLists.length === 0 ? (
+      {/* Empty state for new users */}
+      {!hasCards ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No vocabulary lists yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              Welcome to Language Flashcards
+            </h3>
             <p className="text-muted-foreground mb-4 max-w-sm">
-              Create your first list or upload an image to extract vocabulary from a textbook page.
+              Get started by creating your first vocabulary list or uploading an
+              image to extract words from a textbook.
             </p>
             <div className="flex gap-2">
               <Button variant="outline" asChild>
@@ -109,31 +105,70 @@ export function Dashboard() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {sortedLists.map((list) => (
-            <Link key={list.id} to={`/list/${list.id}`}>
-              <Card className="h-full transition-all hover:shadow-md hover:border-primary/50 cursor-pointer">
-                <CardHeader>
-                  <CardTitle className="line-clamp-1">{list.name}</CardTitle>
-                  <CardDescription>
-                    {list.flashcards.length} flashcard{list.flashcards.length !== 1 ? 's' : ''} • Created {formatDate(list.createdAt)}
-                  </CardDescription>
-                </CardHeader>
-                {list.tags.length > 0 && (
-                  <CardContent>
-                    <div className="flex flex-wrap gap-1">
-                      {list.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <>
+          {/* Stats Row */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <StatsCard
+              title="Due for Review"
+              value={metrics.totalDue}
+              subtitle={
+                metrics.totalDue === 0
+                  ? 'All caught up!'
+                  : `${metrics.totalDue} card${metrics.totalDue !== 1 ? 's' : ''} waiting`
+              }
+              icon={Target}
+              onClick={metrics.totalDue > 0 ? handleStudyDue : undefined}
+              variant={metrics.totalDue === 0 ? 'success' : 'default'}
+            />
+            <StatsCard
+              title="Weekly Accuracy"
+              value={
+                metrics.weeklyAccuracy !== null
+                  ? `${metrics.weeklyAccuracy}%`
+                  : '—'
+              }
+              subtitle={
+                metrics.weeklyAccuracy !== null
+                  ? `${metrics.weeklyReviews} reviews this week`
+                  : 'No reviews yet this week'
+              }
+              icon={TrendingUp}
+            />
+            <StatsCard
+              title="Study Streak"
+              value={
+                metrics.currentStreak > 0 ? `${metrics.currentStreak} day${metrics.currentStreak !== 1 ? 's' : ''}` : '0'
+              }
+              subtitle={
+                metrics.currentStreak > 0
+                  ? 'Keep it going!'
+                  : 'Start studying to build a streak'
+              }
+              icon={Flame}
+              variant={metrics.currentStreak >= 7 ? 'success' : 'default'}
+            />
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Left Column */}
+            <div className="space-y-6">
+              <ListBreakdown lists={metrics.dueByList} />
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-6">
+              <WeeklyChart
+                dailyActivity={metrics.dailyActivity}
+                weeklyReviews={metrics.weeklyReviews}
+                weeklyAccuracy={metrics.weeklyAccuracy}
+              />
+              <ForecastChart />
+              <LearningOverview overview={metrics.learningOverview} />
+            </div>
+          </div>
+
+        </>
       )}
 
       {/* New List Dialog */}
@@ -152,7 +187,10 @@ export function Dashboard() {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewListDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowNewListDialog(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleCreateList} disabled={!newListName.trim()}>
